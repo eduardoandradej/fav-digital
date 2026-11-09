@@ -1,0 +1,34 @@
+# Sincronização periódica do diretório com a identidade técnica de leitura (keytab montado; nunca em variável).
+apiVersion: batch/v1
+kind: CronJob
+metadata: { name: fav-digital-sync }
+spec:
+  schedule: "17 */4 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata: { labels: { app.kubernetes.io/component: sync } }
+        spec:
+          restartPolicy: Never
+          serviceAccountName: fav-digital
+          automountServiceAccountToken: false
+          securityContext: { runAsNonRoot: true, seccompProfile: { type: RuntimeDefault } }
+          containers:
+            - name: sync
+              image: fav-digital
+              command: ["node", "dist/db/cli.js", "sync"]
+              envFrom: [{ configMapRef: { name: fav-digital-config } }]
+              env: [{ name: SESSION_COOKIE_SECURE, value: "true" }]
+              securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: ["ALL"] } }
+              volumeMounts:
+                - { name: tmp, mountPath: /tmp }
+                - { name: db, mountPath: /etc/fav/db, readOnly: true }
+                - { name: krb5, mountPath: /etc/fav/krb5, readOnly: true }
+                - { name: keytab, mountPath: /etc/fav/keytab, readOnly: true }
+          volumes:
+            - { name: tmp, emptyDir: { medium: Memory, sizeLimit: 64Mi } }
+            - { name: db, secret: { secretName: fav-digital-db, items: [{ key: database-url, path: database-url }] } }
+            - { name: krb5, configMap: { name: fav-digital-krb5 } }
+            - { name: keytab, secret: { secretName: fav-digital-keytab, defaultMode: 0400 } }

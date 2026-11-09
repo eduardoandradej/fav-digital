@@ -1,1 +1,191 @@
 openapi: 3.1.0
+info:
+  title: FAV Digital — API
+  version: 0.1.0
+  description: |
+    API REST da Ficha de Acompanhamento de Vestígio (PCERJ). Mesma origem do frontend; sessão opaca em cookie
+    `HttpOnly`/`Secure`/`SameSite=Strict`. Requisições com efeito exigem o cabeçalho `X-CSRF-Token` (valor devolvido no login
+    e em `/auth/sessao`). Comandos de confirmação de atos exigem `Idempotency-Key` (8–128 caracteres): reenvio idêntico
+    devolve o resultado original; conteúdo divergente com a mesma chave → 409 `IDEMPOTENCY_CONFLITO`.
+    Autoria, unidade e papel vêm SEMPRE da sessão no servidor. Instantes em UTC (ISO-8601); apresentação em America/Sao_Paulo.
+    Erros: `{ code, message, details? }`. Recursos fora do escopo da unidade selecionada → 404 (não revela existência).
+servers: [{ url: /api/v1 }]
+tags:
+  - { name: Autenticação }
+  - { name: Painel }
+  - { name: FAV }
+  - { name: Custódia }
+  - { name: Documentos }
+  - { name: Administração }
+  - { name: Saúde }
+components:
+  securitySchemes:
+    sessao: { type: apiKey, in: cookie, name: __Host-fav_sid }
+    csrf: { type: apiKey, in: header, name: X-CSRF-Token }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    Idem: { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 8, maxLength: 128 } }
+  schemas:
+    Erro:
+      type: object
+      required: [code, message]
+      properties: { code: { type: string, examples: [VERSAO_DESATUALIZADA] }, message: { type: string }, details: {} }
+    Versao: { type: object, required: [versao], properties: { versao: { type: integer, description: Versão da ficha lida (controle de concorrência) } } }
+    DataHora: { type: string, format: date-time, description: ISO-8601 com fuso; futuro (> 5 min) é recusado }
+    Observacoes:
+      type: object
+      required: [semAlteracoes]
+      properties:
+        semAlteracoes: { type: boolean }
+        alteracoes: { type: string, description: Alterações previstas (não fraudulentas) }
+        naoConformidades: { type: string }
+      description: '"Sem alterações" exclui descrições; caso contrário, ao menos uma descrição. Ambas podem coexistir.'
+  responses:
+    Erro: { description: Erro, content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+security: [{ sessao: [], csrf: [] }]
+paths:
+  /auth/login:
+    post:
+      tags: [Autenticação]
+      security: []
+      summary: Login por ID funcional e senha institucional (Kerberos → LDAP SASL/GSSAPI)
+      parameters: [{ name: X-Requested-With, in: header, required: true, schema: { const: fav-digital } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [idFuncional, senha], properties: { idFuncional: { type: string, pattern: '^\d{1,19}-?\d$' }, senha: { type: string } } } } } }
+      responses:
+        '200': { description: Sessão aberta; cookies definidos, content: { application/json: { schema: { type: object, properties: { ok: { type: boolean }, csrfToken: { type: string } } } } } }
+        '401': { description: Resposta genérica (credencial inválida, não importada, desativada, bloqueada ou sem papel), content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+        '429': { $ref: '#/components/responses/Erro' }
+        '503': { description: Diretório indisponível (DIRETORIO_INDISPONIVEL), content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+  /auth/logout: { post: { tags: [Autenticação], summary: Revoga a sessão, responses: { '200': { description: OK } } } }
+  /auth/sessao: { get: { tags: [Autenticação], summary: Usuário, contexto de unidade, unidades e papéis autorizados, responses: { '200': { description: OK }, '401': { $ref: '#/components/responses/Erro' } } } }
+  /auth/contexto:
+    post:
+      tags: [Autenticação]
+      summary: Seleciona o contexto de unidade entre os autorizados
+      requestBody: { content: { application/json: { schema: { type: object, required: [unidadeId], properties: { unidadeId: { type: string, format: uuid } } } } } }
+      responses: { '200': { description: OK }, '400': { $ref: '#/components/responses/Erro' } }
+  /painel: { get: { tags: [Painel], summary: Três cards e indicadores da unidade, responses: { '200': { description: OK } } } }
+  /encaminhamentos:
+    get:
+      tags: [Painel]
+      summary: Fila de movimentações da unidade
+      parameters:
+        - { name: tipo, in: query, schema: { enum: [a_receber, enviados, recentes] } }
+        - { name: pagina, in: query, schema: { type: integer, minimum: 1 } }
+      responses: { '200': { description: OK } }
+  /pessoas: { get: { tags: [Painel], summary: Busca mínima de servidores importados e elegíveis, parameters: [{ name: q, in: query, schema: { type: string, minLength: 3 } }], responses: { '200': { description: OK } } } }
+  /unidades: { get: { tags: [Painel], summary: Unidades ativas, responses: { '200': { description: OK } } } }
+  /favs:
+    get:
+      tags: [FAV]
+      summary: Pesquisa por nº da FAV, requisição, procedimento ou lacre no escopo da unidade
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: meusRascunhos, in: query, schema: { type: boolean } }
+        - { name: pagina, in: query, schema: { type: integer } }
+      responses: { '200': { description: Página de resultados } }
+    post:
+      tags: [FAV]
+      summary: Abre FAV em rascunho na unidade selecionada (ORIGEM_COLETA ou REGISTRO_UNIDADE; vínculo elegível)
+      requestBody: { content: { application/json: { schema: { type: object, required: [tipo], properties: { tipo: { enum: [regular, grande_porte] }, campos: { type: object } } } } } }
+      responses: { '201': { description: Criada }, '403': { $ref: '#/components/responses/Erro' } }
+  /favs/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get: { tags: [FAV], summary: 'Ficha completa: campos, autoria por campo, lacres, movimentações, situação, pendências e próximos atos', responses: { '200': { description: OK }, '404': { $ref: '#/components/responses/Erro' } } }
+    patch:
+      tags: [FAV]
+      summary: Preenchimento progressivo / retificação de campos de Informações Gerais
+      description: |
+        Campos do catálogo (`campos` em GET /favs/{id}) mais `primeiro_lacre_numero`. Alterar valor já registrado
+        fora do rascunho é retificação e exige `motivo`. Campos periciais exigem PERICIA na unidade custodiante.
+      requestBody: { content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/Versao' }, { type: object, required: [campos], properties: { campos: { type: object }, motivo: { type: string } } }] } } } }
+      responses: { '200': { description: Nova versão }, '400': { $ref: '#/components/responses/Erro' }, '409': { $ref: '#/components/responses/Erro' } }
+  /favs/{id}/historico:
+    get:
+      tags: [FAV]
+      summary: Histórico de revisões de um campo (chave estável do item)
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { name: entidade, in: query, schema: { type: string, examples: [fav, seal, movement] } }
+        - { name: chave, in: query, schema: { type: string, format: uuid } }
+        - { name: campo, in: query, required: true, schema: { type: string } }
+      responses: { '200': { description: OK } }
+  /favs/{id}/linha-do-tempo:
+    get:
+      tags: [FAV]
+      summary: Eventos de cadeia de custódia
+      parameters: [{ $ref: '#/components/parameters/Id' }, { name: ordem, in: query, schema: { enum: [registro, efetiva] } }]
+      responses: { '200': { description: OK } }
+  /favs/{id}/intervenientes:
+    post:
+      tags: [FAV]
+      summary: Registro documental de pessoa externa (sem conta; lançado por servidor)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [papel, nome, tipoDocumento, numeroDocumento, fonteComprobatoria, comprovacao], properties: { papel: { enum: [coletor, preservador, transportador, entregador, destinatario, acesso_fisico, outro] }, nome: { type: string }, tipoDocumento: { type: string }, numeroDocumento: { type: string }, orgao: { type: string }, fonteComprobatoria: { type: string }, comprovacao: { enum: [pendente, apresentada] } } } } } }
+      responses: { '201': { description: OK } }
+  /favs/{id}/confirmar-coleta:
+    post:
+      tags: [Custódia]
+      summary: Confirmar coleta — gera nº documental (1º lacre/ano/unidade ou nº da requisição)
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Idem' }]
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/Versao' } } } }
+      responses: { '200': { description: OK }, '409': { description: 'REQUISICAO_COLIDE_GRANDE_PORTE / NUMERO_FAV_COLIDE', content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }, '422': { $ref: '#/components/responses/Erro' } }
+  /favs/{id}/envios:
+    post:
+      tags: [Custódia]
+      summary: Registrar envio (abre transferência; uma ativa por vestígio)
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Idem' }]
+      requestBody: { content: { application/json: { schema: { allOf: [{ $ref: '#/components/schemas/Versao' }, { type: object, required: [enviadoEm, localEnvio, unidadeDestinoId], properties: { enviadoEm: { $ref: '#/components/schemas/DataHora' }, localEnvio: { type: string }, unidadeDestinoId: { type: string, format: uuid }, transportadorIntervenienteId: { type: string, format: uuid }, codigoRastreamento: { type: string }, motivoLancamentoPosterior: { type: string } } }] } } } }
+      responses: { '201': { description: OK }, '409': { $ref: '#/components/responses/Erro' }, '422': { $ref: '#/components/responses/Erro' } }
+  /movimentacoes/{id}/recebimento:
+    post:
+      tags: [Custódia]
+      summary: Confirmar recebimento (sessão do recebedor; conferência de lacre/embalagem/SCO)
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Idem' }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [recebidoEm, localEntrega, situacaoLacre, situacaoEmbalagem, correspondenciaSco, observacoes], properties: { recebidoEm: { $ref: '#/components/schemas/DataHora' }, localEntrega: { type: string }, protocolo: { type: string }, lacreObservado: { type: string }, situacaoLacre: { enum: [integro, rompido, divergente, sem_lacre] }, situacaoEmbalagem: { enum: [integra, violada, danificada] }, correspondenciaSco: { enum: [confere, nao_confere, nao_aplicavel, nao_verificado] }, observacoes: { $ref: '#/components/schemas/Observacoes' }, observacaoLivre: { type: string }, motivoLancamentoPosterior: { type: string } } } } } }
+      responses: { '200': { description: OK }, '409': { description: Já recebido / concorrência }, '422': { description: NAO_CONFORMIDADE_SEM_DESCRICAO } }
+  /movimentacoes/{id}/recusa: { post: { tags: [Custódia], summary: Recusar recebimento (evento próprio; custódia permanece com o remetente), parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Idem' }], responses: { '200': { description: OK } } } }
+  /movimentacoes/{id}/cancelamento: { post: { tags: [Custódia], summary: Cancelar envio em trânsito (somente quem registrou), parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Idem' }], responses: { '200': { description: OK } } } }
+  /movimentacoes/{id}/retificacoes:
+    post:
+      tags: [Custódia]
+      summary: Retificar informação de movimentação (≠ novo ato físico); exige motivo
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [campo, valor, motivo], properties: { campo: { enum: [send_location, receive_location, tracking_code, protocolo, obs_livre, sent_at, received_at] }, valor: {}, motivo: { type: string } } } } } }
+      responses: { '200': { description: OK } }
+  /favs/{id}/aberturas: { post: { tags: [Custódia], summary: Registrar abertura (e opcionalmente novo lacre), parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Idem' }], responses: { '201': { description: OK } } } }
+  /favs/{id}/novo-lacre: { post: { tags: [Custódia], summary: Registrar novo lacre após abertura, parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Idem' }], responses: { '201': { description: OK } } } }
+  /favs/{id}/armazenamento: { post: { tags: [Custódia], summary: Entrada/saída/acesso físico/guarda para contraperícia/depósito alternativo, parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Idem' }], responses: { '201': { description: OK } } } }
+  /favs/{id}/amostras: { post: { tags: [Custódia], summary: Vincular FAV de amostra (contraprova/alíquota/contraperícia) — nova ou existente, parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Idem' }], responses: { '201': { description: OK } } } }
+  /favs/{id}/consumo-parcial: { post: { tags: [Custódia], summary: Consumo parcial (mantém custódia do remanescente), parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Idem' }], responses: { '201': { description: OK } } } }
+  /favs/{id}/encerramento: { post: { tags: [Custódia], summary: Registrar destinação — encerramento na SEPOL, parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Idem' }], responses: { '201': { description: OK }, '422': { $ref: '#/components/responses/Erro' } } } }
+  /favs/{id}/pdf:
+    get:
+      tags: [Documentos]
+      summary: PDF da FAV (Informações Gerais + Encaminhamentos), versão corrente; exportação auditada com SHA-256
+      parameters: [{ $ref: '#/components/parameters/Id' }, { name: finalidade, in: query, schema: { type: string } }]
+      responses: { '200': { description: PDF, headers: { X-Documento-SHA256: { schema: { type: string } }, X-Ficha-Versao: { schema: { type: integer } } }, content: { application/pdf: {} } } }
+  /favs/{id}/volumes: { post: { tags: [Documentos], summary: Relação de volumes (grande porte), parameters: [{ $ref: '#/components/parameters/Id' }], responses: { '200': { description: OK } } } }
+  /favs/{id}/etiquetas:
+    post:
+      tags: [Documentos]
+      summary: Gera (ou reimprime com motivo) o lote de etiquetas A4 do Anexo — "Volume X de N"
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/Idem' }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { motivoReimpressao: { type: string } } } } } }
+      responses: { '201': { description: PDF, content: { application/pdf: {} } }, '409': { description: REIMPRESSAO_SEM_MOTIVO } }
+  /favs/{id}/etiquetas/{lote}/status:
+    post:
+      tags: [Documentos]
+      summary: Registrar solicitação de impressão ou confirmação operacional de afixação
+      parameters: [{ $ref: '#/components/parameters/Id' }, { name: lote, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { content: { application/json: { schema: { type: object, required: [status], properties: { status: { enum: [impressao_solicitada, afixacao_confirmada] } } } } } }
+      responses: { '200': { description: OK } }
+  /admin/identidades: { get: { tags: [Administração], summary: Identidades importadas e papéis (ADMIN_CONFIG), responses: { '200': { description: OK } } } }
+  /admin/papeis: { post: { tags: [Administração], summary: Atribuição auditada de papel a identidade importada (piloto), responses: { '201': { description: OK } } } }
+  /admin/papeis/{id}/revogacao: { post: { tags: [Administração], summary: Revogação auditada, parameters: [{ $ref: '#/components/parameters/Id' }], responses: { '200': { description: OK } } } }
+  /admin/sincronizacao: { post: { tags: [Administração], summary: Sincronização completa do diretório, responses: { '200': { description: Relatório da execução } } } }
+  /admin/sincronizacoes: { get: { tags: [Administração], summary: Execuções de sincronização, responses: { '200': { description: OK } } } }
+  /saude/vivo: { get: { tags: [Saúde], security: [], summary: Liveness (processo; não depende do AD nem do banco), responses: { '200': { description: OK } } } }
+  /saude/pronto: { get: { tags: [Saúde], security: [], summary: Readiness (banco), responses: { '200': { description: OK }, '503': { description: Indisponível } } } }
+  /saude/dependencias: { get: { tags: [Saúde], security: [], summary: Diretório como dependência observável, responses: { '200': { description: OK } } } }

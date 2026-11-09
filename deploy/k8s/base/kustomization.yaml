@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+labels:
+  - pairs: { app.kubernetes.io/name: fav-digital, app.kubernetes.io/part-of: fav-digital }
+    includeSelectors: true
+resources:
+  - serviceaccount.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - job-migrate.yaml
+  - cronjob-sync.yaml
+  - networkpolicy.yaml
+images:
+  - name: fav-digital
+    newName: registry.exemplo.invalid/pcerj/fav-digital
+    newTag: "0.1.0"

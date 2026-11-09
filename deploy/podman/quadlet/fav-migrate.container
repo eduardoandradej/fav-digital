@@ -1,0 +1,18 @@
+# Etapa explícita de migração (papel fav_migrator). Executa e termina; protegida por advisory lock.
+[Unit]
+Description=FAV Digital — migrações
+Requires=fav-db.service
+After=fav-db.service
+
+[Container]
+ContainerName=fav-migrate
+Image=localhost/fav-digital:local
+Network=fav.network
+Exec=node dist/db/cli.js migrate
+Environment=FAV_PROFILE=development
+# URL do papel de migração:  printf '%s' 'postgres://fav_migrator:SENHA@fav-db:5432/fav' | podman secret create fav-migration-url -
+Secret=fav-migration-url,type=env,target=MIGRATION_DATABASE_URL
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes

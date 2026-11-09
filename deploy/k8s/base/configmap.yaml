@@ -1,0 +1,38 @@
+# Configuração NÃO sensível. Endpoints reais vêm do overlay do ambiente (sem valores institucionais neste repositório).
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: fav-digital-config }
+data:
+  FAV_PROFILE: homologacao
+  AUTH_PROVIDER: kerberos-ldap
+  PORT: "8080"
+  TRUST_PROXY: "1"
+  KRB5_CONFIG: /etc/fav/krb5/krb5.conf
+  KRB5_REALM: EXEMPLO.INVALID
+  LDAP_URI: ldap://dc.exemplo.invalid:389
+  LDAP_BASE_DN: DC=exemplo,DC=invalid
+  LDAP_SASL_MINSSF: "128"
+  LDAP_IMPORT_FILTER: "(&(objectCategory=person)(objectClass=user))"
+  LDAP_ELIGIBLE_GROUP_DN: ""
+  SESSION_IDLE_MINUTES: "30"
+  SESSION_ABSOLUTE_HOURS: "10"
+  DIRECTORY_STALENESS_HOURS: "26"
+  SYNC_INTERVAL_MINUTES: "0"
+  SYNC_PRINCIPAL: ""
+  SYNC_KEYTAB_FILE: /etc/fav/keytab/sync.keytab
+  DATABASE_URL_FILE: /etc/fav/db/database-url
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: fav-digital-krb5 }
+data:
+  krb5.conf: |
+    # Substituir no overlay pelo krb5.conf aprovado pela DGTIT.
+    [libdefaults]
+      default_realm = EXEMPLO.INVALID
+      dns_lookup_kdc = false
+      rdns = false
+    [realms]
+      EXEMPLO.INVALID = {
+        kdc = kdc.exemplo.invalid
+      }

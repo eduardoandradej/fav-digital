@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: fav-digital }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app.kubernetes.io/component: web } }
+  template:
+    metadata: { labels: { app.kubernetes.io/component: web } }
+    spec:
+      serviceAccountName: fav-digital
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: app
+          image: fav-digital
+          ports: [{ name: http, containerPort: 8080 }]
+          envFrom: [{ configMapRef: { name: fav-digital-config } }]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          # liveness: saúde do processo, sem depender do AD nem do banco
+          livenessProbe: { httpGet: { path: /api/v1/saude/vivo, port: http }, periodSeconds: 15, failureThreshold: 3 }
+          readinessProbe: { httpGet: { path: /api/v1/saude/pronto, port: http }, periodSeconds: 10 }
+          startupProbe: { httpGet: { path: /api/v1/saude/vivo, port: http }, periodSeconds: 3, failureThreshold: 20 }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: db, mountPath: /etc/fav/db, readOnly: true }
+            - { name: krb5, mountPath: /etc/fav/krb5, readOnly: true }
+      volumes:
+        - name: tmp
+          emptyDir: { medium: Memory, sizeLimit: 64Mi }   # cache Kerberos por tentativa: memória, nunca disco
+        - name: db
+          secret: { secretName: fav-digital-db, items: [{ key: database-url, path: database-url }] }
+        - name: krb5
+          configMap: { name: fav-digital-krb5 }

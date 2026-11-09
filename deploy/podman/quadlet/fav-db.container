@@ -1,0 +1,20 @@
+# PostgreSQL 18 LOCAL (desenvolvimento/piloto isolado). Em homologação use o banco provisionado pela DGTIT.
+[Unit]
+Description=FAV Digital — PostgreSQL 18 (local)
+
+[Container]
+ContainerName=fav-db
+Image=docker.io/library/postgres:18
+Network=fav.network
+Volume=fav-pgdata.volume:/var/lib/postgresql
+Environment=POSTGRES_DB=fav
+# Senha do superusuário local via segredo do Podman:  printf '%s' 'senha' | podman secret create fav-pg-admin -
+Secret=fav-pg-admin,type=env,target=POSTGRES_PASSWORD
+HealthCmd=pg_isready -U postgres -d fav
+HealthInterval=10s
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

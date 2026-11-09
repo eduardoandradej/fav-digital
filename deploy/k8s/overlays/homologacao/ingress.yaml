@@ -1,0 +1,12 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fav-digital
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 1m
+spec:
+  tls: [{ hosts: [fav-homolog.exemplo.invalid], secretName: fav-digital-tls }]
+  rules:
+    - host: fav-homolog.exemplo.invalid
+      http:
+        paths: [{ path: /, pathType: Prefix, backend: { service: { name: fav-digital, port: { name: http } } } }]

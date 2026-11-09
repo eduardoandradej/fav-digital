@@ -27,7 +27,7 @@ kind: ConfigMap
 metadata: { name: fav-digital-krb5 }
 data:
   krb5.conf: |
-    # Substituir no overlay pelo krb5.conf aprovado pela DGTIT.
+    # Substituir no overlay pelo krb5.conf aprovado pela CEPF.
     [libdefaults]
       default_realm = EXEMPLO.INVALID
       dns_lookup_kdc = false

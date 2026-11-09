@@ -1,6 +1,6 @@
 # ADR 0003 — Identidade importada, adaptador Kerberos/LDAP por executáveis e sessão opaca
 
-**Status:** aceito (sujeito à homologação DGTIT)
+**Status:** aceito (sujeito à homologação CEPF)
 
 **Decisão:**
 - O adaptador invoca MIT `kinit` e OpenLDAP `ldapsearch` (SASL/GSSAPI, `minssf=128`), reproduzindo o padrão validado no SGE.

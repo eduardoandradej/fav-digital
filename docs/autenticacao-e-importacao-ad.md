@@ -50,7 +50,7 @@ tentativas concorrentes com caches distintos e timeout.
 ## Papéis
 
 No piloto, os papéis são atribuídos de forma **auditada** por `ADMIN_CONFIG` (`POST /admin/papeis`) a identidades já importadas.
-A autoatribuição é proibida. Quando a DGTIT disponibilizar grupos, o mapeamento grupo → papel entra como `source = grupo_diretorio` (P-AD-03).
+A autoatribuição é proibida. Quando a CEPF disponibilizar grupos, o mapeamento grupo → papel entra como `source = grupo_diretorio` (P-AD-03).
 
 ## Desenvolvimento
 
@@ -65,7 +65,7 @@ Os perfis `homologacao` e `producao` **recusam inicializar** com o provedor simu
 | 1000004 | Diego Rocha | CCV: custódia, encerramento | Central |
 | 1000005 | Elisa Prado | DP-001 e ICCE: auditor | Somente leitura |
 | 1000006 | Fábio Nunes | DP-001: registro | **Sem vínculo elegível**: login ok, preenchimento negado |
-| 1000007 | Gabriel Torres | DGTIT: admin | Sem poder de custódia |
+| 1000007 | Gabriel Torres | CEPF: admin | Sem poder de custódia |
 | 1000008 | Helena Dias | ICCE: perícia, custódia | |
 | 1000009 | Ivo Campos | — | Desativado no diretório |
 | 0000010 | Joana Zero | DP-002 | Zeros à esquerda (`000001-0`) |

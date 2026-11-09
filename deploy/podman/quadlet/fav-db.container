@@ -1,4 +1,4 @@
-# PostgreSQL 18 LOCAL (desenvolvimento/piloto isolado). Em homologação use o banco provisionado pela DGTIT.
+# PostgreSQL 18 LOCAL (desenvolvimento/piloto isolado). Em homologação use o banco provisionado pela CEPF.
 [Unit]
 Description=FAV Digital — PostgreSQL 18 (local)
 

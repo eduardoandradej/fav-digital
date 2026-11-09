@@ -28,7 +28,7 @@ abrir FAV → preencher com autoria → confirmar coleta → envio → recebimen
 
 ## Roteiro na homologação institucional
 
-1. DGTIT: fornecer realm/KDC/DC, `krb5.conf`, base DN, filtro de importação, grupo de elegibilidade, conta técnica (keytab), DNS/NTP e liberação 88/389.
+1. CEPF: fornecer realm/KDC/DC, `krb5.conf`, base DN, filtro de importação, grupo de elegibilidade, conta técnica (keytab), DNS/NTP e liberação 88/389.
 2. Banco provisionado: executar `db/bootstrap/00-roles.sql` e definir as senhas; Job de migração.
 3. Primeira sincronização: CronJob manual (`kubectl create job --from=cronjob/fav-digital-sync sync-1`). Conferir `directory_sync_run`.
 4. Atribuir papéis do piloto (`/admin/papeis`) a identidades importadas.
@@ -41,10 +41,10 @@ abrir FAV → preencher com autoria → confirmar coleta → envio → recebimen
 
 | Código | Tema | Decisão a obter |
 |---|---|---|
-| P-AD-01 | DGTIT | Conferir o fluxo com o manual do SGE (não disponível nesta sessão); política SASL/TLS efetiva |
-| P-AD-02 | DGTIT/PCERJ | Critério oficial de elegibilidade como servidor (grupo/atributo/fonte) |
-| P-AD-03 | DGTIT | Grupos por papel/unidade; fonte oficial de lotação e cargo |
-| P-AD-04 | DGTIT | Conduta das sessões durante falha do diretório (adotado: leitura mantida, atos bloqueados após 26 h sem sincronização íntegra) |
+| P-AD-01 | CEPF | Conferir o fluxo com o manual do SGE (não disponível nesta sessão); política SASL/TLS efetiva |
+| P-AD-02 | CEPF/PCERJ | Critério oficial de elegibilidade como servidor (grupo/atributo/fonte) |
+| P-AD-03 | CEPF | Grupos por papel/unidade; fonte oficial de lotação e cargo |
+| P-AD-04 | CEPF | Conduta das sessões durante falha do diretório (adotado: leitura mantida, atos bloqueados após 26 h sem sincronização íntegra) |
 | P-NUM-01 | SSPTC/CEPF | Escopo de unicidade do nº da FAV (adotado: global) |
 | P-NUM-02 | SSPTC/CEPF | Vários vestígios de grande porte na mesma requisição |
 | P-DV-01 | Perícia | Natureza do exame com seleção múltipla (adotado: sim) |
@@ -52,5 +52,5 @@ abrir FAV → preencher com autoria → confirmar coleta → envio → recebimen
 | P-ENC-01/02 | SSPTC | "Doação" como "Outro"; retificação/reabertura após encerramento |
 | P-ETQ-01/02 | SSPTC | Código opaco de consulta; redução de volumes |
 | P-ASS-01 | Jurídico/SSPTC | Valor da confirmação digital × assinatura formal; aceitação do PDF; guarda |
-| P-SCO-01 | DGTIT | Integração SCO/SPT (no MVP: declaração do operador) |
-| P-INT-01 | DGTIT | Proteção adicional das trilhas perante DBA (backup imutável, encadeamento criptográfico) |
+| P-SCO-01 | CEPF | Integração SCO/SPT (no MVP: declaração do operador) |
+| P-INT-01 | CEPF | Proteção adicional das trilhas perante DBA (backup imutável, encadeamento criptográfico) |

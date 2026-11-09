@@ -25,7 +25,7 @@ const accounts = [
   conta('1000004', 'Diego Rocha (sintético)', 'CCV', 'Inspetor de Polícia'),
   conta('1000005', 'Elisa Prado (sintética)', 'DP-001', 'Delegada de Polícia'),
   conta('1000006', 'Fábio Nunes (sintético, sem vínculo elegível)', 'DP-001', 'Colaborador', { elegivel: false }),
-  conta('1000007', 'Gabriel Torres (sintético)', 'DGTIT', 'Analista de TI'),
+  conta('1000007', 'Gabriel Torres (sintético)', 'CEPF', 'Analista'),
   conta('1000008', 'Helena Dias (sintética)', 'ICCE', 'Perita Criminal'),
   conta('1000009', 'Ivo Campos (sintético, desativado)', 'DP-002', 'Inspetor de Polícia', { disabled: true }),
   conta('0000010', 'Joana Zero (sintética)', 'DP-002', 'Inspetora de Polícia'),

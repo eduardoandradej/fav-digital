@@ -296,5 +296,5 @@ npx -y playwright@1.56.1 install chromium && npm i -D --no-save playwright@1.56.
 
 O provedor simulado serve **apenas** para desenvolvimento. O perfil `homologacao` recusa inicializar com ele.
 Para a homologação, siga [homologacao.md](homologacao.md) e [autenticacao-e-importacao-ad.md](autenticacao-e-importacao-ad.md).
-Você vai precisar da DGTIT para: realm/KDC/DC, `krb5.conf`, base DN, filtro de importação, grupo de elegibilidade,
+Você vai precisar da CEPF para: realm/KDC/DC, `krb5.conf`, base DN, filtro de importação, grupo de elegibilidade,
 conta técnica (keytab), DNS/NTP e liberação das portas 88/389.

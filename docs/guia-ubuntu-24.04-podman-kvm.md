@@ -76,6 +76,22 @@ Comandos úteis:
 ./deploy/podman/local.sh reset
 ```
 
+**Acessar pelo IP da máquina** (outros computadores da rede):
+
+```bash
+FAV_BIND=0.0.0.0 ./deploy/podman/local.sh up
+```
+```bash
+hostname -I
+```
+```bash
+sudo ufw allow 8080/tcp
+```
+
+O primeiro comando publica a porta em todas as interfaces. O segundo mostra o IP; acesse `http://IP:8080`.
+O terceiro só é necessário se o firewall `ufw` estiver ativo. Em modo de desenvolvimento a conexão é HTTP, sem TLS:
+use só em rede de teste e com dados sintéticos. Em homologação, o acesso é por HTTPS no Ingress/Route.
+
 `down` para os contêineres e mantém os dados. `reset` apaga também o volume do banco. Para usar outra porta:
 
 ```bash

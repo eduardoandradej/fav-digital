@@ -1,0 +1,24 @@
+{
+  "aviso": "Massa SINTÉTICA de unidades e papéis (piloto com atribuição auditada).",
+  "unidades": [
+    { "code": "DP-001", "name": "1ª Delegacia de Polícia (sintética)", "kind": "policia_judiciaria" },
+    { "code": "DP-002", "name": "2ª Delegacia de Polícia (sintética)", "kind": "policia_judiciaria" },
+    { "code": "ICCE", "name": "Instituto de Criminalística (sintético)", "kind": "pericia" },
+    { "code": "CCV", "name": "Central de Custódia de Vestígios (sintética)", "kind": "central_custodia" },
+    { "code": "DGTIT", "name": "Diretoria de Tecnologia (sintética)", "kind": "administrativa" }
+  ],
+  "papeis": [
+    { "login": "1000001", "unidade": "DP-001", "papeis": ["ORIGEM_COLETA", "REGISTRO_UNIDADE", "CUSTODIA", "ENCERRAMENTO"] },
+    { "login": "1000002", "unidade": "DP-001", "papeis": ["REGISTRO_UNIDADE", "CUSTODIA", "ORIGEM_COLETA"] },
+    { "login": "1000003", "unidade": "ICCE", "papeis": ["PERICIA", "CUSTODIA", "ENCERRAMENTO"] },
+    { "login": "1000004", "unidade": "CCV", "papeis": ["CUSTODIA", "ENCERRAMENTO"] },
+    { "login": "1000005", "unidade": "DP-001", "papeis": ["AUDITOR"] },
+    { "login": "1000005", "unidade": "ICCE", "papeis": ["AUDITOR"] },
+    { "login": "1000006", "unidade": "DP-001", "papeis": ["REGISTRO_UNIDADE"] },
+    { "login": "1000007", "unidade": "DGTIT", "papeis": ["ADMIN_CONFIG"] },
+    { "login": "1000008", "unidade": "ICCE", "papeis": ["PERICIA", "CUSTODIA"] },
+    { "login": "1000009", "unidade": "DP-002", "papeis": ["CUSTODIA"] },
+    { "login": "0000010", "unidade": "DP-002", "papeis": ["CUSTODIA", "REGISTRO_UNIDADE", "ORIGEM_COLETA"] },
+    { "login": "1000012", "unidade": "CCV", "papeis": ["CUSTODIA"] }
+  ]
+}

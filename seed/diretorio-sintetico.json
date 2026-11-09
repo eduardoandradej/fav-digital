@@ -1,0 +1,161 @@
+{
+  "aviso": "DIRETÓRIO SINTÉTICO — somente desenvolvimento/teste. Senha de todas as contas: Sintetica#2026",
+  "grupoElegivel": "CN=FAV-Servidores-PCERJ,OU=Grupos,DC=sintetico,DC=invalid",
+  "accounts": [
+    {
+      "guid": "e27c6592-c523-401f-a879-2fd8c5515df9",
+      "login": "1000001",
+      "functionalId": "1000001",
+      "displayName": "Ana Souza (sintética)",
+      "unitCode": "DP-001",
+      "jobTitle": "Inspetora de Polícia",
+      "memberOf": [
+        "CN=FAV-Servidores-PCERJ,OU=Grupos,DC=sintetico,DC=invalid"
+      ],
+      "disabled": false,
+      "passwordHash": "scrypt$d2a9de34dd8d8000$ceba43df6d18d8d0d4ee3b1ce7afe04ef6a345017f9ff436ec9125b2faa753ac"
+    },
+    {
+      "guid": "63c8f2d5-e387-49ac-a159-69472276b721",
+      "login": "1000002",
+      "functionalId": "1000002",
+      "displayName": "Bruno Lima (sintético)",
+      "unitCode": "DP-001",
+      "jobTitle": "Oficial de Cartório",
+      "memberOf": [
+        "CN=FAV-Servidores-PCERJ,OU=Grupos,DC=sintetico,DC=invalid"
+      ],
+      "disabled": false,
+      "passwordHash": "scrypt$17c3e10514efa8bf$6fa1b6263eefadce6941630c941e1c9608950d1788d3737921fe0f91300b8f31"
+    },
+    {
+      "guid": "fb9dbb4c-dfad-46db-ad64-9dedf46f37a6",
+      "login": "1000003",
+      "functionalId": "1000003",
+      "displayName": "Carla Mendes (sintética)",
+      "unitCode": "ICCE",
+      "jobTitle": "Perita Criminal",
+      "memberOf": [
+        "CN=FAV-Servidores-PCERJ,OU=Grupos,DC=sintetico,DC=invalid"
+      ],
+      "disabled": false,
+      "passwordHash": "scrypt$ace794f37b0f4e40$d6ee148be54e02f305576f64c488756e9c3efb123161b54ecbd55f439f47b273"
+    },
+    {
+      "guid": "506dd3b7-c32e-4729-ab60-a17014577e13",
+      "login": "1000004",
+      "functionalId": "1000004",
+      "displayName": "Diego Rocha (sintético)",
+      "unitCode": "CCV",
+      "jobTitle": "Inspetor de Polícia",
+      "memberOf": [
+        "CN=FAV-Servidores-PCERJ,OU=Grupos,DC=sintetico,DC=invalid"
+      ],
+      "disabled": false,
+      "passwordHash": "scrypt$0f003a31e9f629ba$f58dd7439709f1c80f73a98c4dd0ed14eb5600b6e7b17dbb9c195a7bb064d43f"
+    },
+    {
+      "guid": "ac920975-86ea-4efa-a7d0-f94bc5266113",
+      "login": "1000005",
+      "functionalId": "1000005",
+      "displayName": "Elisa Prado (sintética)",
+      "unitCode": "DP-001",
+      "jobTitle": "Delegada de Polícia",
+      "memberOf": [
+        "CN=FAV-Servidores-PCERJ,OU=Grupos,DC=sintetico,DC=invalid"
+      ],
+      "disabled": false,
+      "passwordHash": "scrypt$e670a9cc7b8b4e28$d149a3021e962d5c97f2e9998c5afe4b258eb9bcdbc7aa3d9363bca6a69ed628"
+    },
+    {
+      "guid": "d4215b97-78dd-47fd-afaf-73d1d0916b16",
+      "login": "1000006",
+      "functionalId": "1000006",
+      "displayName": "Fábio Nunes (sintético, sem vínculo elegível)",
+      "unitCode": "DP-001",
+      "jobTitle": "Colaborador",
+      "memberOf": [],
+      "disabled": false,
+      "passwordHash": "scrypt$3a824dec1d0b82bc$2bfe68662e4912810afed75f47bbf6c13de653b086d253fcd4c5782448d6f531"
+    },
+    {
+      "guid": "18a9f8b1-97fe-400e-a01e-06414659da81",
+      "login": "1000007",
+      "functionalId": "1000007",
+      "displayName": "Gabriel Torres (sintético)",
+      "unitCode": "DGTIT",
+      "jobTitle": "Analista de TI",
+      "memberOf": [
+        "CN=FAV-Servidores-PCERJ,OU=Grupos,DC=sintetico,DC=invalid"
+      ],
+      "disabled": false,
+      "passwordHash": "scrypt$d3c47e0fd21f0ff6$c21d4c22b590484d886278dded72a2aa34737566b4c8905b902cedb8a4bf9abe"
+    },
+    {
+      "guid": "987959f4-1357-490a-a0ba-b05c8bc4ce67",
+      "login": "1000008",
+      "functionalId": "1000008",
+      "displayName": "Helena Dias (sintética)",
+      "unitCode": "ICCE",
+      "jobTitle": "Perita Criminal",
+      "memberOf": [
+        "CN=FAV-Servidores-PCERJ,OU=Grupos,DC=sintetico,DC=invalid"
+      ],
+      "disabled": false,
+      "passwordHash": "scrypt$5a0e440528924513$b4c0a3b8ae1bb641ac26272b2c05ebfc56ce79233f314d1e57abdb1991a55009"
+    },
+    {
+      "guid": "10169ab3-2e6a-46d7-ad0e-e990a67a1156",
+      "login": "1000009",
+      "functionalId": "1000009",
+      "displayName": "Ivo Campos (sintético, desativado)",
+      "unitCode": "DP-002",
+      "jobTitle": "Inspetor de Polícia",
+      "memberOf": [
+        "CN=FAV-Servidores-PCERJ,OU=Grupos,DC=sintetico,DC=invalid"
+      ],
+      "disabled": true,
+      "passwordHash": "scrypt$f6b1d1b30a8c8c36$4dbfd0f9761f776f0777b795c0bdc5909b15bb9babd5b25b2bfc3ea20c31278b"
+    },
+    {
+      "guid": "86621244-66a6-438f-af60-97dc22923ffc",
+      "login": "0000010",
+      "functionalId": "0000010",
+      "displayName": "Joana Zero (sintética)",
+      "unitCode": "DP-002",
+      "jobTitle": "Inspetora de Polícia",
+      "memberOf": [
+        "CN=FAV-Servidores-PCERJ,OU=Grupos,DC=sintetico,DC=invalid"
+      ],
+      "disabled": false,
+      "passwordHash": "scrypt$a50d3bd40bd4140e$2d20cd02bbec8c82986400febc64d99e5b0d81eba2024758a4839cba7129792c"
+    },
+    {
+      "guid": "7f0723d9-54fe-44ae-a3a6-b00e8f05556d",
+      "login": "1000011",
+      "functionalId": "1000011",
+      "displayName": "Kátia Fora (sintética, fora do escopo)",
+      "unitCode": "EXTERNO",
+      "jobTitle": "Terceirizada",
+      "memberOf": [
+        "CN=FAV-Servidores-PCERJ,OU=Grupos,DC=sintetico,DC=invalid"
+      ],
+      "disabled": false,
+      "passwordHash": "scrypt$1139e5855e069315$dc7cfbcd98501833781ed423238ad1e9d0d066098cbf7a3e3749da74b4163b29",
+      "foraDoEscopo": true
+    },
+    {
+      "guid": "e1f04d5f-68be-44ae-a195-8c121f82519a",
+      "login": "1000012",
+      "functionalId": "1000012",
+      "displayName": "Lucas Alves (sintético)",
+      "unitCode": "CCV",
+      "jobTitle": "Oficial de Cartório",
+      "memberOf": [
+        "CN=FAV-Servidores-PCERJ,OU=Grupos,DC=sintetico,DC=invalid"
+      ],
+      "disabled": false,
+      "passwordHash": "scrypt$268c7565b6707bf0$baa2959cb182b6473b7c048efde34e8c0c7008c09e53381417c0a535aa9e41db"
+    }
+  ]
+}

@@ -85,6 +85,7 @@ Containerfile  imagem única multiestágio (UID arbitrário, raiz somente leitur
 | [docs/autenticacao-e-importacao-ad.md](docs/autenticacao-e-importacao-ad.md) | Kerberos/GSSAPI, sincronização, contas sintéticas |
 | [docs/implantacao-e-operacao.md](docs/implantacao-e-operacao.md) | Podman, Kubernetes/OpenShift, banco, backup, CI |
 | [docs/homologacao.md](docs/homologacao.md) | Status A01–A11 com evidências e pendências institucionais |
+| [docs/roteiro-cenario-sintetico.md](docs/roteiro-cenario-sintetico.md) | Roteiro passo a passo: DP-001 → ICCE → CCV → destinação, com variações |
 | [docs/adr/](docs/adr/) | Decisões de arquitetura |
 | `GET /api/v1/openapi.yaml` | Contrato OpenAPI 3.1 |
 

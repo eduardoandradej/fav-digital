@@ -1,16 +1,18 @@
 {
   "name": "fav-digital",
   "private": true,
-  "description": "FAV Digital — Ficha de Acompanhamento de Vestígio (PCERJ). MVP com dados sintéticos.",
-  "workspaces": ["api", "web"],
-  "engines": { "node": "^22.22.3 || ^24.15.0" },
+  "description": "FAV Digital \u2014 Ficha de Acompanhamento de Vest\u00edgio (PCERJ). MVP com dados sint\u00e9ticos.",
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0"
+  },
   "scripts": {
+    "install:all": "npm ci --prefix api && npm ci --prefix web",
     "db:up": "docker run -d --name favpg -e POSTGRES_PASSWORD=devonly -e POSTGRES_DB=fav -p 5432:5432 postgres:18",
-    "db:setup": "npm run -w api db:setup",
-    "build": "npm run -w api build && npm run -w web build",
-    "test": "npm run -w api test && npm run -w web test",
-    "lint": "npm run -w api lint && npm run -w web lint",
-    "dev:api": "npm run -w api dev",
-    "dev:web": "npm run -w web start"
+    "db:setup": "npm run --prefix api build && npm run --prefix api setup:dev",
+    "build": "npm run --prefix api build && npm run --prefix web build",
+    "test": "npm test --prefix api && npm test --prefix web",
+    "lint": "npm run --prefix api lint && npm run --prefix web lint",
+    "dev:api": "npm run --prefix api dev",
+    "dev:web": "npm start --prefix web"
   }
 }

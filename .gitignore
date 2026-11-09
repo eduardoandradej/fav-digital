@@ -6,3 +6,5 @@ coverage/
 *.local
 /tmp/
 dist-test/
+web/dist/
+web/.angular/

@@ -1,0 +1,386 @@
+<nav class="trilha"><a routerLink="/">Início</a> › <a routerLink="/favs">FAV Digital</a> › Ficha</nav>
+@if (erro()) { <p class="erro" role="alert">{{ erro() }} <button class="link" (click)="erro.set('')" aria-label="Fechar mensagem">×</button></p> }
+@if (ok()) { <p class="sucesso" role="status">{{ ok() }} <button class="link" (click)="ok.set('')" aria-label="Fechar mensagem">×</button></p> }
+
+@if (v(); as v) {
+  <header class="ficha-topo">
+    <div>
+      <h1>Nº FAV: {{ v.ficha.numero ?? '(rascunho ' + v.ficha.draft_code + ')' }}</h1>
+      <p class="sub">{{ v.ficha.kind === 'grande_porte' ? 'Vestígio de grande porte' : 'Vestígio regular' }} · versão {{ v.ficha.version }} · modelo {{ v.ficha.model_version }}</p>
+    </div>
+    <button class="sec" (click)="pdf()">PDF da FAV</button>
+  </header>
+
+  <section class="situacao cartao" aria-label="Situação atual">
+    <div><span class="rot">Estado da ficha</span><span class="estado" [attr.data-s]="v.ficha.status">{{ STATUS[v.ficha.status] }}</span></div>
+    <div><span class="rot">Situação física declarada</span><strong>{{ FISICO[v.ficha.physical_state] }}</strong></div>
+    <div><span class="rot">Lacre vigente</span><strong>{{ v.lacreVigente?.number ?? '—' }}</strong></div>
+    <div><span class="rot">Responsável atual</span>
+      @if (v.situacao.emTransito) { <strong>EM TRÂNSITO para {{ v.situacao.emTransito.destino }} desde {{ dataHora(v.situacao.emTransito.desde) }}</strong> <small>(última confirmação: envio)</small> }
+      @else if (v.situacao.responsavelAtual) { <strong>{{ v.situacao.responsavelAtual.nome }}{{ v.situacao.responsavelAtual.externo ? ' [externo]' : '' }}</strong> }
+      @else { <strong>—</strong> }
+    </div>
+    <div><span class="rot">Última movimentação</span>
+      @if (v.situacao.ultimaMovimentacao; as m) { <strong>nº {{ m.seq }} — {{ MOV_STATUS[m.status] }}</strong> } @else { <strong>nenhuma</strong> }
+    </div>
+    @if (v.situacao.pendencias.length) {
+      <div class="pend"><span class="rot">Pendências</span><ul>@for (p of v.situacao.pendencias; track p) { <li>{{ p }}</li> }</ul></div>
+    }
+  </section>
+
+  <section class="atos" aria-label="Próximos atos">
+    <h2>Próximo ato</h2>
+    <div class="botoes">
+      @for (a of v.proximosAtos; track a.acao) {
+        <button [disabled]="!a.permitido" (click)="abrirAto(a.acao === 'guarda_documental' ? '' : a.acao)" [attr.title]="a.motivo ?? null"
+          [attr.aria-describedby]="a.permitido ? null : 'mot-' + a.acao">{{ a.rotulo }}</button>
+        @if (!a.permitido) { <small id="mot-{{ a.acao }}" class="motivo">{{ a.rotulo }}: {{ a.motivo }}</small> }
+      }
+      @if (v.ficha.status !== 'encerrado' && s.sessao()?.usuario?.elegivelPreenchimento) {
+        <button class="sec" (click)="abrirAto('interveniente')">Registrar pessoa externa</button>
+        @if (s.has('PERICIA') && v.ficha.custodian_unit_id === s.sessao()?.contexto?.unidadeId && v.ficha.status !== 'rascunho') {
+          <button class="sec" (click)="abrirAto('consumo_parcial')">Registrar consumo parcial</button>
+        }
+      }
+    </div>
+  </section>
+
+  <div class="abas" role="tablist">
+    @for (t of [['gerais','Informações gerais'],['lacres','Lacres'],['movimentacoes','Movimentações'],['custodia','Custódia e encerramento'],['intervenientes','Intervenientes'],['tempo','Linha do tempo']]; track t[0]) {
+      <button role="tab" [attr.aria-selected]="tab() === t[0]" [class.ativa]="tab() === t[0]" (click)="abrirTab($any(t[0]))">{{ t[1] }}</button>
+    }
+  </div>
+
+  @switch (tab()) {
+    @case ('gerais') {
+      @for (sec of SECOES; track sec.id) {
+        <section class="cartao secao" [attr.aria-labelledby]="'sec-' + sec.id">
+          <div class="secao-topo">
+            <h2 id="sec-{{ sec.id }}">{{ sec.titulo }}</h2>
+            @if (editando() !== sec.id && s.sessao()?.usuario?.elegivelPreenchimento) { <button class="sec" (click)="editar(sec.id)">{{ v.ficha.status === 'rascunho' ? 'Preencher' : 'Complementar / retificar' }}</button> }
+          </div>
+          @if (editando() === sec.id) {
+            <form (ngSubmit)="salvar()" class="grade">
+              @if (sec.id === 'coleta') {
+                <label>Nº 1º lacre {{ v.ficha.kind === 'grande_porte' ? '(facultativo — lacre identificador)' : '' }}<input name="l1" [(ngModel)]="form['primeiro_lacre_numero']" /></label>
+              }
+              @for (c of campos(sec.id); track c[0]) {
+                @let k = c[0];
+                @if (k === 'coleta_responsavel_kind' || k === 'preservacao_kind') {
+                  <label>{{ c[1].rotulo }}
+                    <select [name]="k" [(ngModel)]="form[k]"><option [ngValue]="null">—</option><option value="servidor">Servidor da PCERJ</option><option value="externo">Pessoa externa</option></select>
+                  </label>
+                } @else if (k.endsWith('_identity_id')) {
+                  @if (form[k.replace('_identity_id', '_kind')] === 'servidor') {
+                    <label>Buscar servidor (ID funcional ou nome, mín. 3)
+                      <input [name]="k + '_q'" (input)="buscarPessoa(k, $any($event.target).value)" />
+                    </label>
+                    <label>{{ c[1].rotulo }}
+                      <select [name]="k" [(ngModel)]="form[k]">
+                        <option [ngValue]="form[k]">{{ form[k] ? valor(k) : '— selecione —' }}</option>
+                        @for (p of pessoasBusca()[k] ?? []; track p.id) { <option [ngValue]="p.id">{{ p.nome }} (ID {{ p.id_funcional }}, {{ p.lotacao }})</option> }
+                      </select>
+                    </label>
+                  }
+                } @else if (k.endsWith('_intervener_id')) {
+                  @if (form[k.replace('_intervener_id', '_kind')] === 'externo') {
+                    <label>{{ c[1].rotulo }}
+                      <select [name]="k" [(ngModel)]="form[k]"><option [ngValue]="null">— selecione (registre antes em “Registrar pessoa externa”) —</option>
+                        @for (i of v.intervenientes; track i.id) { <option [ngValue]="i.id">{{ i.name }} — {{ i.role }}</option> }</select>
+                    </label>
+                  }
+                } @else if (k === 'natureza_exame') {
+                  <fieldset><legend>{{ c[1].rotulo }}</legend>
+                    @for (n of NAT; track n[0]) { <label class="radio"><input type="checkbox" [checked]="(form[k] ?? []).includes(n[0])" (change)="toggleNat(n[0])" /> {{ n[1] }}</label> }
+                  </fieldset>
+                } @else if (k === 'amostragem_classe') {
+                  <label>{{ c[1].rotulo }}<select [name]="k" [(ngModel)]="form[k]"><option [ngValue]="null">—</option>
+                    @for (o of ['prova','contraprova','aliquota','contrapericia']; track o) { <option [value]="o">{{ o }}</option> }</select></label>
+                } @else if (k === 'preservacao_mesmo_coletor' || k === 'sco_primeiro_lacre_conferido') {
+                  <label class="radio"><input type="checkbox" [name]="k" [(ngModel)]="form[k]" /> {{ c[1].rotulo }}</label>
+                } @else if (k === 'unidade_pj_id' || k === 'guarda_unidade_id') {
+                  <label>{{ c[1].rotulo }}<select [name]="k" [(ngModel)]="form[k]"><option [ngValue]="null">—</option>
+                    @for (u of unidades(); track u.id) { <option [value]="u.id">{{ u.code }} — {{ u.name }}</option> }</select></label>
+                } @else if (k === 'coleta_data_hora') {
+                  <label>{{ c[1].rotulo }} (horário de Brasília)<input type="datetime-local" [name]="k" [(ngModel)]="form[k]" /></label>
+                } @else if (k === 'coleta_geo_lat' || k === 'coleta_geo_lon') {
+                  <label>{{ c[1].rotulo }}<input type="number" step="0.000001" [name]="k" [(ngModel)]="form[k]" /></label>
+                } @else if (k === 'vestigio_descricao' || k === 'vestigio_localizacao') {
+                  <label class="largo">{{ c[1].rotulo }}<textarea [name]="k" [(ngModel)]="form[k]" rows="3"></textarea></label>
+                } @else if (!(k.startsWith('preservacao') && form['preservacao_mesmo_coletor'])) {
+                  <label>{{ c[1].rotulo }}<input [name]="k" [(ngModel)]="form[k]" /></label>
+                }
+              }
+              @if (precisaMotivo()) {
+                <label class="largo">Motivo (obrigatório para retificar valor já registrado)<textarea name="motivo" [(ngModel)]="motivo" rows="2"></textarea></label>
+              }
+              <div class="largo botoes"><button type="submit" [disabled]="busy()">Salvar</button><button type="button" class="sec" (click)="editando.set(null)">Cancelar</button></div>
+            </form>
+          } @else {
+            <dl class="campos">
+              @if (sec.id === 'coleta') {
+                @let l1 = v.lacres[0];
+                <div><dt>Nº 1º lacre</dt><dd>{{ l1?.number ?? '—' }}
+                  @if (l1) { @let au = autoria('seal', l1.id, 'number'); @if (au) {
+                    <button class="link" (click)="toggleAutoria('l1')" [attr.aria-expanded]="autoriaAberta() === 'l1'">autoria</button>
+                    @if (autoriaAberta() === 'l1') { <span class="autoria">Preenchido por {{ au.preenchidoPor.por }} ({{ au.preenchidoPor.unidade }}) em {{ dataHora(au.preenchidoPor.em) }} · última alteração: {{ au.ultimaAlteracao.por }} em {{ dataHora(au.ultimaAlteracao.em) }} · <button class="link" (click)="verHistorico('seal', l1.id, 'number', 'Nº 1º lacre')">ver histórico</button></span> }
+                  } }
+                </dd></div>
+              }
+              @for (c of campos(sec.id); track c[0]) {
+                @let k = c[0];
+                @if (v.ficha[k] !== null || !k.endsWith('_id')) {
+                  <div><dt>{{ c[1].rotulo }}</dt><dd>{{ valor(k) }}
+                    @let au = autoria('fav', v.ficha.id, k);
+                    @if (au) {
+                      <button class="link" (click)="toggleAutoria(k)" [attr.aria-expanded]="autoriaAberta() === k" [attr.aria-label]="'Autoria de ' + c[1].rotulo">autoria</button>
+                      @if (autoriaAberta() === k) {
+                        <span class="autoria">
+                          Preenchido por <strong>{{ au.preenchidoPor.por }}</strong> (ID {{ au.preenchidoPor.idFuncional }}, {{ au.preenchidoPor.unidade }}{{ au.preenchidoPor.origem !== 'humano' ? ', ' + au.preenchidoPor.origem : '' }}) em {{ dataHora(au.preenchidoPor.em) }}
+                          · Alterado pela última vez por <strong>{{ au.ultimaAlteracao.por }}</strong> ({{ au.ultimaAlteracao.unidade }}) em {{ dataHora(au.ultimaAlteracao.em) }} — {{ au.ultimaAlteracao.acao }}
+                          · {{ au.revisoes }} revisão(ões) · <button class="link" (click)="verHistorico('fav', v.ficha.id, k, c[1].rotulo)">ver histórico</button>
+                        </span>
+                      }
+                    }
+                  </dd></div>
+                }
+              }
+            </dl>
+          }
+        </section>
+      }
+    }
+
+    @case ('lacres') {
+      <section class="cartao">
+        <h2>Lacres ({{ v.lacres.length }})</h2>
+        <table class="tabela"><thead><tr><th>Ordem</th><th>Número</th><th>Situação</th><th>Aplicado em</th><th>Local</th></tr></thead>
+          <tbody>@for (l of v.lacres; track l.id) { <tr><td>{{ l.ordinal }}º</td><td>{{ l.number }}</td><td>{{ l.status === 'ativo' ? 'VIGENTE' : 'Rompido' }}</td><td>{{ dataHora(l.applied_at) }}</td><td>{{ l.applied_location ?? '—' }}</td></tr> }</tbody></table>
+        <h2>Aberturas e relacres ({{ v.aberturas.length }})</h2>
+        @if (!v.aberturas.length) { <p class="vazio">Nenhuma abertura registrada.</p> }
+        @for (o of v.aberturas; track o.id) {
+          <article class="item">
+            <h3>Abertura do lacre {{ o.lacre_anterior }} → {{ o.novo_lacre ?? 'RECIPIENTE ABERTO' }}</h3>
+            <p>Motivo: {{ o.motivo }}{{ o.finalidade ? ' — ' + o.finalidade : '' }}</p>
+            <p>{{ dataHora(o.opened_at) }} · {{ o.location }} · {{ o.responsavel_nome }} (ID {{ o.responsavel_id_funcional }}, {{ o.responsavel_cargo }})</p>
+            @if (o.status === 'fechado') { <p>Novo lacre em {{ dataHora(o.closed_at) }} · lacre rompido acondicionado: {{ o.broken_seal_packaged ? 'sim' : 'não' }} · SCO: {{ o.sco_observacao_ref ?? '—' }}</p> }
+          </article>
+        }
+      </section>
+    }
+
+    @case ('movimentacoes') {
+      <section class="cartao">
+        <div class="secao-topo"><h2>Movimentações ({{ movs().length }})</h2>
+          @if (atoPermitido('registrar_envio')) { <button (click)="abrirAto('registrar_envio')">Adicionar movimentação (registrar envio)</button> }
+        </div>
+        <label>Filtrar por situação
+          <select [ngModel]="movFiltroSig()" (ngModelChange)="movFiltroSig.set($event); movPagina.set(1)" name="mf"><option value="">Todas</option>
+            @for (k of ['em_transito','recebido','recebido_com_ressalva','recusado','cancelado']; track k) { <option [value]="k">{{ MOV_STATUS[k] }}</option> }</select>
+        </label>
+        @if (!movs().length) { <p class="vazio">Nenhuma movimentação.</p> }
+        @for (m of movsPagina(); track m.id) {
+          <article class="item mov">
+            <h3>Nº {{ m.seq }} — {{ MOV_STATUS[m.status] }} <small>{{ m.origem_codigo }} → {{ m.destino_codigo }}</small></h3>
+            <div class="grade2">
+              <div><strong>Envio</strong> {{ dataHora(m.sent_at) }} · {{ m.send_location }}<br />Responsável pela entrega:
+                {{ m.sender_kind === 'externo' ? m.remetente_externo_nome + ' [externo, ' + m.remetente_externo_doc_tipo + ' ' + m.remetente_externo_doc + '] — registro documental' : m.remetente_nome + ' (ID ' + m.remetente_id_funcional + ')' }}
+                @if (m.transportador_nome) { <br />Transportador: {{ m.transportador_nome }} } @if (m.tracking_code) { · Rastreamento {{ m.tracking_code }} }</div>
+              <div><strong>Recebimento</strong> {{ dataHora(m.received_at) }} · {{ m.receive_location ?? '—' }}<br />Responsável pelo recebimento: {{ m.recebedor_nome ? m.recebedor_nome + ' (ID ' + m.recebedor_id_funcional + ')' : '—' }}
+                @if (m.protocolo) { · Protocolo {{ m.protocolo }} }</div>
+            </div>
+            <p><strong>OBS.:</strong>
+              @if (m.obs_sem_alteracoes) { Sem alterações }
+              @if (m.obs_alteracoes) { Com alterações: {{ m.obs_alteracoes }} }
+              @if (m.obs_nao_conformidades) { <span class="nc">Não conformidades: {{ m.obs_nao_conformidades }}</span> }
+              @if (m.seal_expected || m.seal_observed) { · lacre esperado {{ m.seal_expected ?? '—' }} / observado {{ m.seal_observed ?? '—' }} }
+              @if (m.refusal_reason) { · Recusa: {{ m.refusal_reason }} } @if (m.cancel_reason) { · Cancelamento: {{ m.cancel_reason }} }
+            </p>
+          </article>
+        }
+        @if (movs().length > movPorPagina) {
+          <div class="paginacao"><button class="sec" [disabled]="movPagina() <= 1" (click)="movPagina.set(movPagina() - 1)">Anterior</button>
+            <span>Página {{ movPagina() }}</span><button class="sec" [disabled]="movPagina() * movPorPagina >= movs().length" (click)="movPagina.set(movPagina() + 1)">Próxima</button></div>
+        }
+      </section>
+    }
+
+    @case ('custodia') {
+      <section class="cartao">
+        <h2>Central / armazenamento / acesso físico</h2>
+        @if (!v.armazenamento.length) { <p class="vazio">Nenhum registro.</p> }
+        @for (e of v.armazenamento; track e.id) {
+          <p class="item">{{ dataHora(e.effective_at) }} · <strong>{{ e.kind.replace('_', ' ') }}</strong> · {{ e.unidade_codigo }} · {{ e.pessoa_nome ?? e.pessoa_externa_nome }} {{ e.protocolo ? '· protocolo ' + e.protocolo : '' }} {{ e.local_guarda ? '· ' + e.local_guarda : '' }} {{ e.finalidade ? '· ' + e.finalidade : '' }}</p>
+        }
+        <h2>Amostragem</h2>
+        @if (!v.amostras.length) { <p class="vazio">Sem vínculos.</p> }
+        @for (l of v.amostras; track l.id) {
+          <p class="item">@if (l.prova_fav_id === v.ficha.id) { {{ l.relation }}: <a [routerLink]="['/favs', l.derivada_fav_id]">{{ l.derivada_numero ?? l.derivada_rascunho }}</a> }
+            @else { Prova: <a [routerLink]="['/favs', l.prova_fav_id]">{{ l.prova_numero }}</a> } — {{ l.derivation_act }}</p>
+        }
+        <h2>Encerramento da cadeia de custódia</h2>
+        @if (v.encerramento; as c) {
+          <p>{{ c.tipo.replaceAll('_', ' ') }}{{ c.outro_descricao ? ': ' + c.outro_descricao : '' }} · documento {{ c.documento_numero }} · {{ dataHora(c.effective_at) }} · {{ c.location }}</p>
+          <p>Responsável: {{ c.responsavel_nome }} (ID {{ c.responsavel_id_funcional }}, {{ c.responsavel_cargo }}) {{ c.destinatario ? '· destinatário ' + c.destinatario : '' }} {{ c.autorizacao_judicial_ref ? '· autorização ' + c.autorizacao_judicial_ref : '' }}</p>
+        } @else { <p class="vazio">Não encerrada.</p> }
+      </section>
+    }
+
+    @case ('intervenientes') {
+      <section class="cartao">
+        <h2>Intervenientes externos (registro documental)</h2>
+        <p class="nota">Pessoas de fora da PCERJ não têm conta nem confirmam atos no sistema. O lançamento é feito por servidor autorizado, identificado separadamente.</p>
+        @if (!v.intervenientes.length) { <p class="vazio">Nenhum.</p> }
+        @for (i of v.intervenientes; track i.id) {
+          <p class="item"><strong>{{ i.name }}</strong> — {{ i.role }} · {{ i.document_type }} {{ i.document_number }} {{ i.organization ? '· ' + i.organization : '' }}<br />
+            Fonte: {{ i.evidence_source }} · comprovação <strong>{{ i.evidence_status }}</strong> · registrado por {{ i.registrado_por_nome }} em {{ dataHora(i.registered_at) }}</p>
+        }
+      </section>
+    }
+
+    @case ('tempo') {
+      <section class="cartao">
+        <div class="secao-topo"><h2>Linha do tempo dos atos</h2>
+          <label>Ordenar por <select [ngModel]="ordem()" (ngModelChange)="ordem.set($event); carregarTempo()" name="ord"><option value="registro">sequência de registro</option><option value="efetiva">data/hora efetiva</option></select></label>
+        </div>
+        <ol class="tempo">
+          @for (e of tempo(); track e.id) {
+            <li><strong>{{ e.summary }}</strong><br />
+              <small>Efetivo: {{ dataHora(e.effective_at) }} · registrado em {{ dataHora(e.recorded_at) }} por {{ e.registrado_por }} (ID {{ e.id_funcional }}, {{ e.unidade }}{{ e.actor_role ? ', ' + e.actor_role : '' }}) · versão {{ e.fav_version }}
+                @if (e.late_entry_reason) { · <em>lançamento posterior: {{ e.late_entry_reason }}</em> }</small></li>
+          }
+        </ol>
+      </section>
+    }
+  }
+
+  @if (historico(); as h) {
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="hist-t">
+      <div class="cartao">
+        <h2 id="hist-t">Histórico — {{ h.titulo }}</h2>
+        <table class="tabela"><thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Anterior</th><th>Novo</th><th>Motivo</th></tr></thead>
+          <tbody>@for (r of h.itens; track r.id) { <tr><td>{{ dataHora(r.recorded_at) }}</td><td>{{ r.por }} ({{ r.unidade_atuacao }})</td><td>{{ r.action }}{{ r.origin !== 'humano' ? ' (' + r.origin + ')' : '' }}</td><td>{{ fmtValor(r.old_value) }}</td><td>{{ fmtValor(r.new_value) }}</td><td>{{ r.reason ?? '' }}</td></tr> }</tbody></table>
+        <button (click)="historico.set(null)">Fechar</button>
+      </div>
+    </div>
+  }
+
+  @if (ato(); as acao) {
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ato-t">
+      <form class="cartao" (ngSubmit)="confirmando() ? executar() : confirmando.set(true)">
+        <h2 id="ato-t">{{ confirmando() ? 'Confirme o ato' : 'Registrar ato' }}</h2>
+        @if (!confirmando()) {
+          <div class="grade">
+            @switch (acao) {
+              @case ('confirmar_coleta') { <p class="largo">Confere os dados da coleta e do 1º lacre e gera o nº da FAV.</p> }
+              @case ('registrar_envio') {
+                <label>Unidade de destino<select name="d" [(ngModel)]="atoForm.unidadeDestinoId" required><option value="">—</option>
+                  @for (u of unidades(); track u.id) { @if (u.id !== s.sessao()?.contexto?.unidadeId) { <option [value]="u.id">{{ u.code }} — {{ u.name }}</option> } }</select></label>
+                <label>Data/hora do envio<input type="datetime-local" name="e" [(ngModel)]="atoForm.enviadoEm" required /></label>
+                <label>Local de envio<input name="l" [(ngModel)]="atoForm.localEnvio" required /></label>
+                <label>Transportador externo (opcional)<select name="t" [(ngModel)]="atoForm.transportadorIntervenienteId"><option value="">—</option>
+                  @for (i of v.intervenientes; track i.id) { <option [value]="i.id">{{ i.name }}</option> }</select></label>
+                <label>Código de rastreamento<input name="r" [(ngModel)]="atoForm.codigoRastreamento" /></label>
+              }
+              @case ('confirmar_recebimento') {
+                <label>Data/hora do recebimento<input type="datetime-local" name="rc" [(ngModel)]="atoForm.recebidoEm" required /></label>
+                <label>Local de entrega<input name="le" [(ngModel)]="atoForm.localEntrega" required /></label>
+                <label>Protocolo<input name="pr" [(ngModel)]="atoForm.protocolo" /></label>
+                <label>Nº do lacre observado (esperado: {{ v.lacreVigente?.number ?? 'sem lacre' }})<input name="lo" [(ngModel)]="atoForm.lacreObservado" /></label>
+                <label>Situação do lacre<select name="sl" [(ngModel)]="atoForm.situacaoLacre"><option value="integro">Íntegro</option><option value="rompido">Rompido</option><option value="divergente">Número divergente</option><option value="sem_lacre">Sem lacre</option></select></label>
+                <label>Embalagem<select name="se" [(ngModel)]="atoForm.situacaoEmbalagem"><option value="integra">Íntegra</option><option value="violada">Violada</option><option value="danificada">Danificada</option></select></label>
+                <label>Correspondência com SPT/SCO<select name="sc" [(ngModel)]="atoForm.correspondenciaSco"><option value="confere">Confere</option><option value="nao_confere">Não confere</option><option value="nao_aplicavel">Não aplicável</option><option value="nao_verificado">Não verificado</option></select></label>
+                <fieldset class="largo"><legend>OBS.</legend>
+                  <label class="radio"><input type="checkbox" name="sa" [(ngModel)]="atoForm.semAlteracoes" /> Sem alterações</label>
+                  @if (!atoForm.semAlteracoes) {
+                    <label>Com alterações (previstas, não fraudulentas) — descreva<textarea name="ca" [(ngModel)]="atoForm.alteracoes"></textarea></label>
+                    <label>Não conformidades — descreva<textarea name="nc" [(ngModel)]="atoForm.naoConformidades"></textarea></label>
+                  }
+                </fieldset>
+              }
+              @case ('recusar_recebimento') {
+                <label class="largo">Motivo da recusa<textarea name="m" [(ngModel)]="atoForm.motivo" required></textarea></label>
+                <label>Data/hora<input type="datetime-local" name="rd" [(ngModel)]="atoForm.recusadoEm" /></label>
+              }
+              @case ('cancelar_envio') { <label class="largo">Motivo do cancelamento<textarea name="m" [(ngModel)]="atoForm.motivo" required></textarea></label> }
+              @case ('registrar_abertura') {
+                <label class="largo">Motivo da abertura do lacre {{ v.lacreVigente?.number }}<textarea name="m" [(ngModel)]="atoForm.motivo" required></textarea></label>
+                <label>Finalidade<input name="fi" [(ngModel)]="atoForm.finalidade" /></label>
+                <label>Data/hora da abertura<input type="datetime-local" name="ab" [(ngModel)]="atoForm.abertoEm" /></label>
+                <label>Local<input name="lo" [(ngModel)]="atoForm.local" required /></label>
+                @if (!s.has('PERICIA')) { <label>Referência da autorização (obrigatória fora da perícia)<input name="au" [(ngModel)]="atoForm.autorizacaoRef" required /></label> }
+                <label class="radio largo"><input type="checkbox" name="fa" [(ngModel)]="atoForm.fecharAgora" /> Registrar o novo lacre agora</label>
+                @if (atoForm.fecharAgora) {
+                  <label>Nº do novo lacre<input name="nl" [(ngModel)]="atoForm.novoLacre" required /></label>
+                  <label>Data/hora do novo lacre<input type="datetime-local" name="fe" [(ngModel)]="atoForm.fechadoEm" /></label>
+                  <label>Referência da observação no SPT/SCO<input name="sco" [(ngModel)]="atoForm.referenciaSco" /></label>
+                  <label class="radio largo"><input type="checkbox" name="ac" [(ngModel)]="atoForm.acondicionado" required /> O lacre rompido (e os anteriores) foi acondicionado dentro da nova embalagem</label>
+                }
+              }
+              @case ('registrar_novo_lacre') {
+                <label>Nº do novo lacre<input name="nl" [(ngModel)]="atoForm.novoLacre" required /></label>
+                <label>Data/hora<input type="datetime-local" name="fe" [(ngModel)]="atoForm.fechadoEm" /></label>
+                <label>Referência da observação no SPT/SCO<input name="sco" [(ngModel)]="atoForm.referenciaSco" /></label>
+                <label class="radio largo"><input type="checkbox" name="ac" [(ngModel)]="atoForm.acondicionado" required /> O lacre rompido foi acondicionado na nova embalagem</label>
+              }
+              @case ('vincular_amostra') {
+                <label>Relação<select name="re" [(ngModel)]="atoForm.relacao"><option value="contraprova">Contraprova</option><option value="aliquota">Alíquota</option><option value="contrapericia">Contraperícia</option></select></label>
+                <label class="largo">Ato de derivação<textarea name="ad" [(ngModel)]="atoForm.atoDerivacao" required></textarea></label>
+                <label>1º lacre da nova FAV<input name="pl" [(ngModel)]="atoForm.primeiroLacre" required /></label>
+                <label>Data/hora<input type="datetime-local" name="dc" [(ngModel)]="atoForm.coletadoEm" /></label>
+                <label>Local<input name="lc" [(ngModel)]="atoForm.local" required /></label>
+                <label>Tipo<input name="tp" [(ngModel)]="atoForm.tipo" required /></label>
+                <label class="largo">Descrição<textarea name="ds" [(ngModel)]="atoForm.descricao" required></textarea></label>
+              }
+              @case ('registrar_armazenamento') {
+                <label>Tipo<select name="tp" [(ngModel)]="atoForm.tipo">@for (t of [['entrada','Entrada na central'],['saida','Saída'],['acesso_fisico','Acesso físico'],['guarda_contrapericia','Guarda para contraperícia'],['deposito_alternativo','Depósito alternativo'],['devolucao_pos_pericia','Devolução após perícia']]; track t[0]) { <option [value]="t[0]">{{ t[1] }}</option> }</select></label>
+                <label>Protocolo<input name="pr" [(ngModel)]="atoForm.protocolo" /></label>
+                <label>Referência ocorrência/inquérito<input name="ro" [(ngModel)]="atoForm.referenciaOcorrencia" /></label>
+                <label>Local de guarda<input name="lg" [(ngModel)]="atoForm.localGuarda" /></label>
+                <label>Pessoa<select name="pt" [(ngModel)]="atoForm.pessoaTipo"><option value="servidor">Eu (servidor da sessão)</option><option value="externo">Pessoa externa registrada</option></select></label>
+                @if (atoForm.pessoaTipo === 'externo') { <label>Interveniente<select name="iv" [(ngModel)]="atoForm.intervenienteId">@for (i of v.intervenientes; track i.id) { <option [value]="i.id">{{ i.name }}</option> }</select></label> }
+                <label>Data/hora<input type="datetime-local" name="oc" [(ngModel)]="atoForm.ocorridoEm" /></label>
+                <label>Finalidade<input name="fi" [(ngModel)]="atoForm.finalidade" /></label>
+                <label>Documento de decisão<input name="dd" [(ngModel)]="atoForm.documentoDecisao" /></label>
+              }
+              @case ('registrar_destinacao') {
+                <label>Tipo<select name="tp" [(ngModel)]="atoForm.tipo">@for (t of [['analise_destrutiva','Análise destrutiva (laudo)'],['destruicao','Destruição'],['devolucao_proprietario','Devolução ao proprietário'],['transferencia_externa','Transferência para órgão externo'],['outro','Outro (ex.: doação)']]; track t[0]) { <option [value]="t[0]">{{ t[1] }}</option> }</select></label>
+                @if (atoForm.tipo === 'outro') { <label>Descrição motivada<input name="od" [(ngModel)]="atoForm.outroDescricao" required /></label> }
+                @if (atoForm.tipo !== 'analise_destrutiva') { <label>Nº do documento do encerramento<input name="dn" [(ngModel)]="atoForm.documentoNumero" required /></label> }
+                <label>Autorização judicial (ref.)<input name="aj" [(ngModel)]="atoForm.autorizacaoJudicialRef" /></label>
+                <label>Data/hora<input type="datetime-local" name="oc" [(ngModel)]="atoForm.ocorridoEm" /></label>
+                <label>Local<input name="lc" [(ngModel)]="atoForm.local" required /></label>
+                <label>Destinatário / órgão<input name="de" [(ngModel)]="atoForm.destinatario" /></label>
+              }
+              @case ('consumo_parcial') {
+                <label>Laudo<input name="la" [(ngModel)]="atoForm.laudo" required /></label>
+                <label>Data/hora<input type="datetime-local" name="oc" [(ngModel)]="atoForm.ocorridoEm" /></label>
+                <label class="largo">Descrição do consumo<textarea name="ds" [(ngModel)]="atoForm.descricao" required></textarea></label>
+              }
+              @case ('interveniente') {
+                <label>Papel<select name="pa" [(ngModel)]="atoForm.papel">@for (p of ['coletor','preservador','transportador','entregador','destinatario','acesso_fisico','outro']; track p) { <option [value]="p">{{ p }}</option> }</select></label>
+                <label>Nome<input name="no" [(ngModel)]="atoForm.nome" required /></label>
+                <label>Tipo de documento com foto<input name="td" [(ngModel)]="atoForm.tipoDocumento" required /></label>
+                <label>Nº do documento<input name="nd" [(ngModel)]="atoForm.numeroDocumento" required /></label>
+                <label>Órgão/instituição<input name="or" [(ngModel)]="atoForm.orgao" /></label>
+                <label class="largo">Fonte comprobatória (ex.: termo de entrega nº)<input name="fc" [(ngModel)]="atoForm.fonteComprobatoria" required /></label>
+                <label>Comprovação<select name="cp" [(ngModel)]="atoForm.comprovacao"><option value="apresentada">Apresentada</option><option value="pendente">Pendente</option></select></label>
+              }
+            }
+            @if (['registrar_envio','confirmar_recebimento','registrar_abertura','registrar_destinacao'].includes(acao)) {
+              <label class="largo">Motivo de lançamento posterior (obrigatório se o ato ocorreu há mais de 24 h)<input name="lp" [(ngModel)]="atoForm.motivoLancamentoPosterior" /></label>
+            }
+          </div>
+        } @else {
+          <ul class="resumo">@for (l of resumo(); track $index) { <li>{{ l }}</li> }</ul>
+          <p class="nota">A confirmação digital registra sua autoria autenticada. Ela não substitui assinatura formal exigida para documento físico (pendência de homologação).</p>
+        }
+        <div class="botoes">
+          <button type="submit" [disabled]="busy()">{{ confirmando() ? 'Confirmar e registrar' : 'Revisar resumo' }}</button>
+          @if (confirmando()) { <button type="button" class="sec" (click)="confirmando.set(false)">Voltar</button> }
+          <button type="button" class="sec" (click)="ato.set(null)">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  }
+} @else if (!erro()) { <p role="status">Carregando…</p> }
